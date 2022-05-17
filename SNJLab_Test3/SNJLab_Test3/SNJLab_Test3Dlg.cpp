@@ -11,7 +11,7 @@
 #define new DEBUG_NEW
 #endif
 
-
+#define FIND_TIMER 11023
 // CAboutDlg dialog used for App About
 
 class CAboutDlg : public CDialogEx
@@ -92,6 +92,7 @@ BEGIN_MESSAGE_MAP(CSNJLab_Test3Dlg, CDialogEx)
 	ON_CBN_SELCHANGE(IDC_COMBO_FILL_BASE, &CSNJLab_Test3Dlg::OnCbnSelchangeComboFillBase)
 	ON_BN_CLICKED(IDC_BUTTON_POSITION_VIEW, &CSNJLab_Test3Dlg::OnBnClickedButtonPositionView)
 	ON_BN_CLICKED(IDC_BUTTON_START_EXPERT, &CSNJLab_Test3Dlg::OnBnClickedButtonStartExpert)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -423,7 +424,11 @@ void CSNJLab_Test3Dlg::ReceiveSysMessageItgexpertctlctrl1(short nSysMsg)
 	// TODO: Add your message handler code here
 	CString strLogText;
 	strLogText.Format(_T(" ReceiveSysMsg nSysMsg[%d]"), nSysMsg);
+	
 	SendLog(strLogText);
+
+	if (nSysMsg == 1)
+		InItAccountNo();
 }
 
 
@@ -457,14 +462,22 @@ void CSNJLab_Test3Dlg::ReceiveRealDataItgexpertctlctrl2()
 void CSNJLab_Test3Dlg::InItAccountNo()
 {
 	int nAcntCnt = m_ctlOCXTR.GetAccountCount();
-	CString strAcnt;
-	for (int i = 0; i < nAcntCnt; i++)
+	CString strAcnt, strLogText;
+	if (nAcntCnt > 0)
 	{
-		strAcnt = m_ctlOCXTR.GetAccount(i);
-		m_CBAcctNo.AddString(strAcnt);
-	}
+		for (int i = 0; i < nAcntCnt; i++)
+		{
+			strAcnt = m_ctlOCXTR.GetAccount(i);
+			m_CBAcctNo.AddString(strAcnt);
+		}
 
-	m_CBAcctNo.SetCurSel(0);
+		m_CBAcctNo.SetCurSel(0);
+
+		strLogText.Format(_T(" [%d] Account Loaded"), nAcntCnt);
+		SendLog(strLogText);
+	}
+	else
+		SendLog(_T(" No Account"));
 }
 
 void CSNJLab_Test3Dlg::OnBnClickedButtonRequest()
@@ -842,13 +855,9 @@ void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 						pOrgOrderInfo->nReplacedQty = pOrgOrderInfo->nReplacedQty + nFilledQty;
 						pOrgOrderInfo->nOpenQty = pOrgOrderInfo->nOpenQty - nFilledQty;
 
-						if (pOrgOrderInfo->nOpenQty == 0)
-						{
-							/// 원주문 끝
+						if (pOrgOrderInfo->nOpenQty == 0)		/// 원주문 끝
 							pOrgOrderInfo->nOrderStatus = ORDER_REPLACED_CLOSE;
-						}
-
-
+						
 						strLogText.Format(_T(" %s->%s 정정완료 Acct[%s], Code[%s]"), strOrgOrderNo, strOrderNo, pOrderInfo->strAcct, pOrderInfo->strCode);
 						SendLog(strLogText);
 					}
@@ -867,11 +876,9 @@ void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 						pOrgOrderInfo->nCanceledQty = pOrgOrderInfo->nCanceledQty + nFilledQty;
 						pOrgOrderInfo->nOpenQty = pOrgOrderInfo->nOpenQty - nFilledQty;
 
-						if (pOrgOrderInfo->nOpenQty == 0)
-						{
-							/// 원주문 끝
+						if (pOrgOrderInfo->nOpenQty == 0)	/// 원주문 끝
 							pOrgOrderInfo->nOrderStatus = ORDER_CANCELED_CLOSE;
-						}
+						
 						//pOrderInfo->nCanceledQty = _ttoi(parOrderReal->GetAt(SCN_R_ORDER_QTY));
 						pOrderInfo->nFilledQty = nFilledQty;
 						pOrderInfo->nOpenQty = pOrderInfo->nOpenQty - nFilledQty;
@@ -1068,20 +1075,14 @@ void CSNJLab_Test3Dlg::ShowFillList(int nBase, CString strKey)
 	switch (nBase)
 	{
 	case 0: /// 전체
-		{
-			pFillList = &m_listFill;
-		}
+		pFillList = &m_listFill;
 		break;
 	case 1: /// 종목별
-		{
-			m_mapCodeFill.Lookup(strKey, pFillList);
-		}
+		m_mapCodeFill.Lookup(strKey, pFillList);
 		break;
 	case 2: /// 주문번호별
-		{
-			if (m_mapOrder.Lookup(strKey, pOrderInfo))
-				pFillList = pOrderInfo->pListFill;
-		}
+		if (m_mapOrder.Lookup(strKey, pOrderInfo))
+			pFillList = pOrderInfo->pListFill;
 		break;
 	}
 
@@ -1320,4 +1321,52 @@ CString CSNJLab_Test3Dlg::GetOrderStatusString(int nOrderStatus)
 void CSNJLab_Test3Dlg::OnBnClickedButtonStartExpert()
 {
 	// TODO: Add your control notification handler code here
+	HWND hExpertLogin =  ::FindWindow(NULL, _T("eFriend Expert 로그인"));
+	CString strLogText;
+
+	if (hExpertLogin)
+		HookExert(hExpertLogin);
+	else
+	{
+		int nRet = WinExec("C:\\eFriend Expert\\efriendexpert\\efriendexpert.exe", SW_SHOW);
+		if (nRet < 31)
+		{
+			strLogText.Format(_T(" [%d] Fail to execute eFriendExpert"), nRet);
+			SendLog(strLogText);
+		}
+		else
+		{
+			strLogText.Format(_T(" Success to execute eFriendExpert"));
+			SendLog(strLogText);
+
+			SetTimer(FIND_TIMER, 1000, NULL);
+		}
+	}
+
+}
+
+
+void CSNJLab_Test3Dlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	if (nIDEvent == FIND_TIMER)
+	{
+		HWND hExpertLogin = ::FindWindow(NULL, _T("eFriend Expert 로그인"));
+		if (hExpertLogin)
+		{
+			HookExert(hExpertLogin);
+			KillTimer(FIND_TIMER);
+		}
+	}
+	CDialogEx::OnTimer(nIDEvent);
+}
+
+void CSNJLab_Test3Dlg::HookExert(HWND hExpertLogin)
+{
+
+	//::PostMessage(hExpertLogin, WM_KEYDOWN, VK_RETURN, 0L);
+	//::PostMessage(hExpertLogin, WM_KEYDOWN, VK_TAB, 0L);
+	//::PostMessage(hExpertLogin, WM_CHAR, 'j', ' ');
+	::PostMessage(hExpertLogin, WM_CHAR, (WPARAM)0x41, (LPARAM)0);
+	//::PostMessage(hExpertLogin, WM_KEYDOWN, (WPARAM)0x41, (LPARAM)0);
 }

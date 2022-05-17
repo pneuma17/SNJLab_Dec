@@ -238,6 +238,7 @@ public:
 	void ShowFillList(int nBase, CString strKey);
 	void SendLog(CString strText);
 	void ClearMemory();
+	void HookExert(HWND hExpertLogin);
 
 	afx_msg void OnBnClickedButtonRequest();
 	afx_msg void OnCbnSelchangeComboOrder();
@@ -250,4 +251,5 @@ public:
 	afx_msg void OnCbnSelchangeComboFillBase();
 	afx_msg void OnBnClickedButtonPositionView();
 	afx_msg void OnBnClickedButtonStartExpert();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
