@@ -5,6 +5,7 @@
 #pragma once
 #include "cditgexpertctl.h"
 #include "afxwin.h"
+#include "afxcmn.h"
 
 struct stRequest
 {
@@ -30,6 +31,15 @@ enum ORDERTYPE
 	ORDER_BUY,
 	ORDER_REPLACE,
 	ORDER_CANCEL
+};
+
+enum ORDER_STATUS
+{
+	ORDER_OPEN = 0,
+	ORDER_FILLED_CLOSE,
+	ORDER_REPLACED_CLOSE,
+	ORDER_CANCELED_CLOSE,
+	ORDER_REJECTED
 };
 
 struct stCurPrice
@@ -105,7 +115,12 @@ enum SCN_R_INDEX
 
 struct stFill
 {
-	CTime	tFilledTime;
+	CString strAcct;
+	CString strGDCode;
+	CString strCode;
+	CString strOrderNo;
+	CString	strFilledTime;
+	int		nOrderType;
 	int		nFilledQty;
 	double	dFilledPrice;
 };
@@ -116,17 +131,18 @@ struct stOrderInfo
 	CString strGDCode;
 	CString strCode;
 	CString strOrderNo;
+	CString strOrgOrderNo;
 	CString strKRXOrderNo;			/// 한국거래소 주문조작번호
 	CString	strOrderTime;
 	CString	strFilledTime;
 	int		nOrderType;				/// 매도, 매수, 정정, 취소
-	int		nOrderState;			/// Open, Close(Replaced, Calceled, Filled)
+	int		nOrderStatus;			/// 0=Open, 1=Fille Close, 2= Replced Close, 3=Canceld Close, 4=Rejected
 
 	int		nOrderQty;
 	int		nOpenQty;
 	int		nFilledQty;
 	int		nCanceledQty;
-	int		nReplacedQry;
+	int		nReplacedQty;
 
 	int		nOrderPriceType;		/// 지정가, 시장가
 	double	dOrderPrice;
@@ -135,6 +151,13 @@ struct stOrderInfo
 	CTypedPtrList<CPtrList, stFill*>* pListFill;		/// 체결 리스트
 };
 
+struct stPosition
+{
+	CString strAcct;
+	CString strCode;
+	int		nQty;
+	double	dPrice;
+};
 // CSNJLab_Test3Dlg dialog
 class CSNJLab_Test3Dlg : public CDialogEx
 {
@@ -162,18 +185,39 @@ protected:
 public:
 	CDITGExpertCtl m_ctlOCXTR;
 	CDITGExpertCtl m_ctlOCXReal;
+	/// Request Data
 	CMap<WORD, WORD, stRequest*, stRequest*> m_mapRequest;				/// TR Request Map (Key : RQID)
+	
+	/// Order Data
 	CTypedPtrMap<CMapStringToPtr, CString, stOrderInfo*>	m_mapOrder;			/// Order Map (Key : OrderNo)
+	CTypedPtrList<CPtrList, stOrderInfo*>					m_listOrder;		/// Order List(Whole)
+	CTypedPtrMap<CMapStringToPtr, CString, CPtrList*>		m_mapCodeOrder;		/// Order Map (Key : Code)
 	CTypedPtrMap<CMapStringToPtr, CString, CStringArray*>	m_mapReverseOrder;	/// Reversed Order Map (Key : OrderNo)
+	
+	/// Fill Data
+	CTypedPtrList<CPtrList, stFill*>						m_listFill	;		/// Fill List(Whole)
+	CTypedPtrMap<CMapStringToPtr, CString, CPtrList*>		m_mapCodeFill;		/// Fill Map (Key : Code)
+
+	/// Position Data
+	CTypedPtrMap<CMapStringToPtr, CString, stPosition*>		m_mapPosition;		/// Fill Map (Key : Code)
+
 	CEdit m_EDCode;
 	CComboBox m_CBOrderType;
 	CComboBox m_CBPriceType;
-	CEdit m_EDOrderQTY;
+	CEdit m_EDOrderQty;
 	CEdit m_EDOrderPrice;
 	CComboBox m_CBAcctNo;
 	stCurPrice m_stCurPrice;
 	CEdit m_EDOrgOrderNo;
 	CEdit m_EDPWD;
+	CListCtrl m_ctlOrderList;
+	CListCtrl m_ctlFillList;
+	CComboBox m_CBFillBase;
+	CEdit m_EDFillBase;
+	CComboBox m_CBFull;
+	CEdit m_ctrEDOrderCode;
+	CListCtrl m_ctlPositionList;
+	CEdit m_EDLog;
 
 	DECLARE_EVENTSINK_MAP()
 	void ReceiveDataItgexpertctlctrl1();
@@ -181,12 +225,28 @@ public:
 	void ReceiveSysMessageItgexpertctlctrl1(short nSysMsg);
 	void ReceiveRealDataItgexpertctlctrl2();
 
-	afx_msg void OnBnClickedButtonRequest();
-	afx_msg void OnCbnSelchangeComboOrder();
-
+	void InitControls();
 	void InItAccountNo();
 	void RequestCurPrice(CString strCode, BOOL bRegisterReal = TRUE);
 	void RequestOrder(int nOrderType, CString strAcctNo, CString strPWD, CString strCode, unsigned int nOrderQty, int nPriceType, double dOrderPrice, CString strOrgOrderNo);
 	void ProcessSCN_R(CStringArray* parOrderReal);
+	void ProcessOrderDS(stOrderInfo* pOrderInfo);
+	CString GetOrderTypeString(int nOrderType);
+	CString GetOrderPriceTypeString(int nOrderPriceType);
+	CString GetOrderStatusString(int nOrderStatus);
+	void ShowOrderList(CString strCode);
+	void ShowFillList(int nBase, CString strKey);
+	void SendLog(CString strText);
+	void ClearMemory();
 
+	afx_msg void OnBnClickedButtonRequest();
+	afx_msg void OnCbnSelchangeComboOrder();
+	afx_msg void OnBnClickedButtonOrderView();
+	afx_msg void OnClose();
+	afx_msg void OnNMClickListOrder(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnCbnSelchangeComboPricetype();
+	afx_msg void OnCbnSelchangeComboFull();
+	afx_msg void OnBnClickedButtonFillView();
+	afx_msg void OnCbnSelchangeComboFillBase();
+	afx_msg void OnBnClickedButtonPositionView();
 };
