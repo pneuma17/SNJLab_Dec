@@ -91,6 +91,7 @@ BEGIN_MESSAGE_MAP(CSNJLab_Test3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_FILL_VIEW, &CSNJLab_Test3Dlg::OnBnClickedButtonFillView)
 	ON_CBN_SELCHANGE(IDC_COMBO_FILL_BASE, &CSNJLab_Test3Dlg::OnCbnSelchangeComboFillBase)
 	ON_BN_CLICKED(IDC_BUTTON_POSITION_VIEW, &CSNJLab_Test3Dlg::OnBnClickedButtonPositionView)
+	ON_BN_CLICKED(IDC_BUTTON_START_EXPERT, &CSNJLab_Test3Dlg::OnBnClickedButtonStartExpert)
 END_MESSAGE_MAP()
 
 
@@ -1314,4 +1315,9 @@ CString CSNJLab_Test3Dlg::GetOrderStatusString(int nOrderStatus)
 	}
 
 	return strText;
+}
+
+void CSNJLab_Test3Dlg::OnBnClickedButtonStartExpert()
+{
+	// TODO: Add your control notification handler code here
 }

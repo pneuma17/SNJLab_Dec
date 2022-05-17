@@ -249,4 +249,5 @@ public:
 	afx_msg void OnBnClickedButtonFillView();
 	afx_msg void OnCbnSelchangeComboFillBase();
 	afx_msg void OnBnClickedButtonPositionView();
+	afx_msg void OnBnClickedButtonStartExpert();
 };
