@@ -199,7 +199,7 @@ public:
 	CTypedPtrMap<CMapStringToPtr, CString, CPtrList*>		m_mapCodeFill;		/// Fill Map (Key : Code)
 
 	/// Position Data
-	CTypedPtrMap<CMapStringToPtr, CString, stPosition*>		m_mapPosition;		/// Fill Map (Key : Code)
+	CTypedPtrMap<CMapStringToPtr, CString, stPosition*>		m_mapPosition;		/// Fill Map (Key : Acct_Code)
 
 	CEdit m_EDCode;
 	CComboBox m_CBOrderType;

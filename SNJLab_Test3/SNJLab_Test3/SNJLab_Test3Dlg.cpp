@@ -719,7 +719,7 @@ void CSNJLab_Test3Dlg::RequestOrder(int nOrderType, CString strAcctNo, CString s
 void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 {
 	stOrderInfo* pOrderInfo = NULL;
-	CString strLogText;
+	CString strLogText, strPositionKey;
 
 	if (m_mapOrder.Lookup(parOrderReal->GetAt(SCN_R_ORDER_NO), pOrderInfo))
 	{
@@ -768,10 +768,11 @@ void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 
 				/// Position Update
 				stPosition* pPosition = NULL;
-				if (!m_mapPosition.Lookup(pOrderInfo->strCode, pPosition))
+				strPositionKey.Format(_T("%s_%s"), pOrderInfo->strAcct, pOrderInfo->strCode);
+				if (!m_mapPosition.Lookup(strPositionKey, pPosition))
 				{
 					pPosition = new stPosition;
-					m_mapPosition.SetAt(pOrderInfo->strCode, pPosition);
+					m_mapPosition.SetAt(strPositionKey, pPosition);
 					
 					pPosition->strAcct	= pOrderInfo->strAcct;
 					pPosition->strCode = pOrderInfo->strCode;
@@ -1116,7 +1117,7 @@ void CSNJLab_Test3Dlg::OnBnClickedButtonPositionView()
 {
 	// TODO: Add your control notification handler code here
 	POSITION pos;
-	CString strCode, strText;
+	CString strPositionKey, strText;
 	stPosition* pPosition;
 	int nRow = 0;
 	pos = m_mapPosition.GetStartPosition();
@@ -1125,7 +1126,7 @@ void CSNJLab_Test3Dlg::OnBnClickedButtonPositionView()
 
 	while (pos)
 	{
-		m_mapPosition.GetNextAssoc(pos, strCode, pPosition);
+		m_mapPosition.GetNextAssoc(pos, strPositionKey, pPosition);
 
 		if (pPosition)
 		{
