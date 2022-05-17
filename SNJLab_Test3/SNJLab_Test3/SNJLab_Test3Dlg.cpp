@@ -1213,6 +1213,7 @@ void CSNJLab_Test3Dlg::ClearMemory()
 	while (pos)
 	{
 		m_mapReverseOrder.GetNextAssoc(pos, strCode, parOrderReal);
+		parOrderReal->RemoveAll();
 		delete parOrderReal;
 	}
 
