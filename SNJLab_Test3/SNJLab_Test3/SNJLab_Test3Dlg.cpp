@@ -46,7 +46,7 @@ END_MESSAGE_MAP()
 // CSNJLab_Test3Dlg dialog
 
 
-
+CString strLogText;
 
 CSNJLab_Test3Dlg::CSNJLab_Test3Dlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CSNJLab_Test3Dlg::IDD, pParent)
@@ -253,7 +253,6 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 {
 	// TODO: Add your message handler code here
 	short nRQID = m_ctlOCXTR.GetRecvRqID();
-	CString strLogText;
 	stRequest* pRequest;
 
 	CString strErrorCode = m_ctlOCXTR.GetRtCode();
@@ -314,6 +313,7 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 				
 				pRcvOrderInfo->strKRXOrderNo = m_ctlOCXTR.GetSingleData(0, 0);
 				pRcvOrderInfo->strOrderNo = m_ctlOCXTR.GetSingleData(1, 0);
+				pRcvOrderInfo->strOrderNo.TrimLeft('0');
 				pRcvOrderInfo->strOrderTime = m_ctlOCXTR.GetSingleData(2, 0);
 				pRcvOrderInfo->nOrderStatus = ORDER_OPEN;
 				pRcvOrderInfo->nOpenQty = pRcvOrderInfo->nOrderQty;
@@ -322,7 +322,7 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 				pRcvOrderInfo->nReplacedQty = 0;
 				pRcvOrderInfo->pListFill = new CTypedPtrList<CPtrList, stFill*>;
 
-				if (pRcvOrderInfo->strOrderNo.Trim().IsEmpty())
+				if (pRcvOrderInfo->strOrderNo.IsEmpty())
 				{
 					/// 오류
 					strLogText.Format(_T(" RQID[%d] ErrorCode[%s], ReqMsgCoce[%s], Msg[%s] Acct[%s], Code[%s] 주문 실패"), nRQID, strErrorCode, strRegMsgCode, strGetReqMessage, pRcvOrderInfo->strAcct, pRcvOrderInfo->strCode);
@@ -357,6 +357,7 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 
 				pRcvOrderInfo->strKRXOrderNo = m_ctlOCXTR.GetSingleData(0, 0);
 				pRcvOrderInfo->strOrderNo = m_ctlOCXTR.GetSingleData(1, 0);
+				pRcvOrderInfo->strOrderNo.TrimLeft('0');
 				pRcvOrderInfo->strOrderTime = m_ctlOCXTR.GetSingleData(2, 0);
 				pRcvOrderInfo->nOrderStatus = ORDER_OPEN;
 				pRcvOrderInfo->nOpenQty = pRcvOrderInfo->nOrderQty;
@@ -365,7 +366,7 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 				pRcvOrderInfo->nReplacedQty = 0;
 				pRcvOrderInfo->pListFill = new CTypedPtrList<CPtrList, stFill*>;
 
-				if (pRcvOrderInfo->strOrderNo.Trim().IsEmpty())
+				if (pRcvOrderInfo->strOrderNo.IsEmpty())
 				{
 					/// 오류
 					strLogText.Format(_T(" RQID[%d] ErrorCode[%s], ReqMsgCoce[%s], Msg[%s] Acct[%s], Code[%s] 주문 실패"), nRQID, strErrorCode, strRegMsgCode, strGetReqMessage, pRcvOrderInfo->strAcct, pRcvOrderInfo->strCode);
@@ -409,7 +410,6 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 void CSNJLab_Test3Dlg::ReceiveErrorDataItgexpertctlctrl1()
 {
 	// TODO: Add your message handler code here
-	CString strLogText;
 	CString strErrorCode = m_ctlOCXTR.GetRtCode();
 	CString strRegMsgCode = m_ctlOCXTR.GetReqMsgCode();
 	CString strGetReqMessage = m_ctlOCXTR.GetReqMessage();
@@ -422,7 +422,6 @@ void CSNJLab_Test3Dlg::ReceiveErrorDataItgexpertctlctrl1()
 void CSNJLab_Test3Dlg::ReceiveSysMessageItgexpertctlctrl1(short nSysMsg)
 {
 	// TODO: Add your message handler code here
-	CString strLogText;
 	strLogText.Format(_T(" ReceiveSysMsg nSysMsg[%d]"), nSysMsg);
 	
 	SendLog(strLogText);
@@ -435,34 +434,35 @@ void CSNJLab_Test3Dlg::ReceiveSysMessageItgexpertctlctrl1(short nSysMsg)
 void CSNJLab_Test3Dlg::ReceiveRealDataItgexpertctlctrl2()
 {
 	// TODO: Add your message handler code here
-	CString strText, strOrderNo;
+	CString strText, strOrderNo, strOrgOrderNo;
 	int nFieldCnt = m_ctlOCXReal.GetSingleFieldCount();
 	CStringArray* parOrderReal = new CStringArray;
 	parOrderReal->SetSize(nFieldCnt);
 	stOrderInfo* pOrderInfo = NULL;
-	//CString strLogText = _T("\n");
 
 	for (int i = 0; i < nFieldCnt; i++)
-	{
 		parOrderReal->SetAt(i, m_ctlOCXReal.GetSingleData(i, 0));
-		//strLogText = strLogText + _T("[") + parOrderReal->GetAt(i) + _T("]");
-	}
-	//strLogText = strLogText + _T("\n");
 
 	strOrderNo = parOrderReal->GetAt(SCN_R_ORDER_NO);
+	strOrderNo.TrimLeft('0');
+	parOrderReal->SetAt(SCN_R_ORDER_NO, strOrderNo);
+
+	strOrgOrderNo = parOrderReal->GetAt(SCN_R_ORG_ORDER_NO);
+	strOrgOrderNo.TrimLeft('0');
+	parOrderReal->SetAt(SCN_R_ORG_ORDER_NO, strOrgOrderNo);
+
 	if (m_mapOrder.Lookup(strOrderNo, pOrderInfo))			/// 주문번호 있을시	
 		ProcessSCN_R(parOrderReal);
-	else													/// 실시간 들어왔는데 주문 번호가 없다->Reverse 발생
+	else													/// 실시간 들어왔는데 주문 번호가 없다->Reverse or 타매체 발생
 		m_mapReverseOrder.SetAt(strOrderNo, parOrderReal);
 
-	//TRACE(strLogText);
 }
 
 
 void CSNJLab_Test3Dlg::InItAccountNo()
 {
 	int nAcntCnt = m_ctlOCXTR.GetAccountCount();
-	CString strAcnt, strLogText;
+	CString strAcnt;
 	if (nAcntCnt > 0)
 	{
 		for (int i = 0; i < nAcntCnt; i++)
@@ -497,6 +497,8 @@ void CSNJLab_Test3Dlg::OnBnClickedButtonRequest()
 	m_EDOrderPrice.GetWindowText(strOrderPrice);
 	m_EDOrderQty.GetWindowText(strOrderQty);
 	m_EDOrgOrderNo.GetWindowText(strOrgOrderNo);
+	strOrgOrderNo.TrimLeft('0');
+
 	m_EDPWD.GetWindowText(strPWD);
 
 	nOrderQty = _ttoi(strOrderQty);
@@ -733,7 +735,7 @@ void CSNJLab_Test3Dlg::RequestOrder(int nOrderType, CString strAcctNo, CString s
 void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 {
 	stOrderInfo* pOrderInfo = NULL;
-	CString strLogText, strPositionKey;
+	CString strPositionKey;
 
 	if (m_mapOrder.Lookup(parOrderReal->GetAt(SCN_R_ORDER_NO), pOrderInfo))
 	{
@@ -1322,7 +1324,6 @@ void CSNJLab_Test3Dlg::OnBnClickedButtonStartExpert()
 {
 	// TODO: Add your control notification handler code here
 	HWND hExpertLogin =  ::FindWindow(NULL, _T("eFriend Expert 로그인"));
-	CString strLogText;
 
 	if (hExpertLogin)
 		HookExert(hExpertLogin);
