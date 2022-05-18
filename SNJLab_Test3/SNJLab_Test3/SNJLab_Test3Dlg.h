@@ -25,7 +25,7 @@ enum TRID
 	TRID_SMCO,			/// 정정/취소주문
 };
 
-enum ORDERTYPE
+enum ORDER_TYPE
 {
 	ORDER_SELL = 0,
 	ORDER_BUY,
@@ -118,9 +118,10 @@ struct stFill
 	CString strAcct;
 	CString strGDCode;
 	CString strCode;
+	CString strCodeName;
 	CString strOrderNo;
 	CString	strFilledTime;
-	int		nOrderType;
+	ORDER_TYPE nOrderType;
 	int		nFilledQty;
 	double	dFilledPrice;
 };
@@ -130,13 +131,14 @@ struct stOrderInfo
 	CString strAcct;
 	CString strGDCode;
 	CString strCode;
+	CString strCodeName;
 	CString strOrderNo;
 	CString strOrgOrderNo;
 	CString strKRXOrderNo;			/// 한국거래소 주문조작번호
 	CString	strOrderTime;
 	CString	strFilledTime;
-	int		nOrderType;				/// 매도, 매수, 정정, 취소
-	int		nOrderStatus;			/// 0=Open, 1=Fille Close, 2= Replced Close, 3=Canceld Close, 4=Rejected
+	ORDER_TYPE nOrderType;				/// 매도, 매수, 정정, 취소
+	ORDER_STATUS nOrderStatus;			/// 0=Open, 1=Fille Close, 2= Replced Close, 3=Canceld Close, 4=Rejected
 
 	int		nOrderQty;
 	int		nOpenQty;
@@ -144,7 +146,7 @@ struct stOrderInfo
 	int		nCanceledQty;
 	int		nReplacedQty;
 
-	int		nOrderPriceType;		/// 지정가, 시장가
+	ORDER_PRICE_TYPE nOrderPriceType;		/// 지정가, 시장가
 	double	dOrderPrice;
 	double	dFilledPrice;
 	
@@ -155,6 +157,7 @@ struct stPosition
 {
 	CString strAcct;
 	CString strCode;
+	CString strCodeName;
 	int		nQty;
 	double	dPrice;
 };
@@ -228,12 +231,12 @@ public:
 	void InitControls();
 	void InItAccountNo();
 	void RequestCurPrice(CString strCode, BOOL bRegisterReal = TRUE);
-	void RequestOrder(int nOrderType, CString strAcctNo, CString strPWD, CString strCode, unsigned int nOrderQty, int nPriceType, double dOrderPrice, CString strOrgOrderNo);
+	void RequestOrder(ORDER_TYPE nOrderType, CString strAcctNo, CString strPWD, CString strCode, unsigned int nOrderQty, ORDER_PRICE_TYPE nPriceType, double dOrderPrice, CString strOrgOrderNo);
 	void ProcessSCN_R(CStringArray* parOrderReal);
 	void ProcessOrderDS(stOrderInfo* pOrderInfo);
 	CString GetOrderTypeString(int nOrderType);
 	CString GetOrderPriceTypeString(int nOrderPriceType);
-	CString GetOrderStatusString(int nOrderStatus);
+	CString GetOrderStatusString(ORDER_STATUS nOrderStatus);
 	void ShowOrderList(CString strCode);
 	void ShowFillList(int nBase, CString strKey);
 	void SendLog(CString strText);
