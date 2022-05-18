@@ -426,8 +426,21 @@ void CSNJLab_Test3Dlg::ReceiveSysMessageItgexpertctlctrl1(short nSysMsg)
 	
 	SendLog(strLogText);
 
-	if (nSysMsg == 1)
+	switch (nSysMsg)
+	{
+	case 1:		/// 메인시작
 		InItAccountNo();
+		break;
+	case 2:		/// 메인종료
+		if (IDYES == AfxMessageBox(_T("eFriendExpert가 종료되었습니다. 재기동 하시겠습니까?"), MB_YESNO))
+			OnBnClickedButtonStartExpert();
+		else
+			SendLog(_T(" eFriendExpert 종료!!"));
+		break;
+	case 3:		/// 메인 재접속
+		InItAccountNo();
+		break;
+	}
 }
 
 
@@ -462,6 +475,7 @@ void CSNJLab_Test3Dlg::ReceiveRealDataItgexpertctlctrl2()
 void CSNJLab_Test3Dlg::InItAccountNo()
 {
 	int nAcntCnt = m_ctlOCXTR.GetAccountCount();
+	m_CBAcctNo.ResetContent();
 	CString strAcnt;
 	if (nAcntCnt > 0)
 	{
