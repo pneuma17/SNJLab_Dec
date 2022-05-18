@@ -711,6 +711,7 @@ void CSNJLab_Test3Dlg::RequestOrder(int nOrderType, CString strAcctNo, CString s
 				m_ctlOCXTR.SetSingleData(7, strOrderQty);	/// 주문수량
 			else
 			{
+				pOrderInfo->nOrderQty = 0;
 				m_ctlOCXTR.SetSingleData(7, _T(""));	/// 주문수량
 				m_ctlOCXTR.SetSingleData(9, _T("Y"));	/// 잔량전부 "Y"
 			}
@@ -860,6 +861,12 @@ void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 						if (pOrgOrderInfo->nOpenQty == 0)		/// 원주문 끝
 							pOrgOrderInfo->nOrderStatus = ORDER_REPLACED_CLOSE;
 						
+						///잔량 정정
+						if (pOrderInfo->nOrderQty == 0)
+						{
+							pOrderInfo->nOrderQty = nFilledQty;
+							pOrderInfo->nOpenQty = nFilledQty;
+						}
 						strLogText.Format(_T(" %s->%s 정정완료 Acct[%s], Code[%s]"), strOrgOrderNo, strOrderNo, pOrderInfo->strAcct, pOrderInfo->strCode);
 						SendLog(strLogText);
 					}
@@ -883,7 +890,8 @@ void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 						
 						//pOrderInfo->nCanceledQty = _ttoi(parOrderReal->GetAt(SCN_R_ORDER_QTY));
 						pOrderInfo->nFilledQty = nFilledQty;
-						pOrderInfo->nOpenQty = pOrderInfo->nOpenQty - nFilledQty;
+						pOrderInfo->nOrderQty = nFilledQty;
+						pOrderInfo->nOpenQty = 0;
 						pOrderInfo->nOrderStatus = ORDER_FILLED_CLOSE;
 
 						strLogText.Format(_T(" %s->%s 취소완료 Acct[%s], Code[%s]"), strOrgOrderNo, strOrderNo, pOrderInfo->strAcct, pOrderInfo->strCode);
@@ -1156,7 +1164,6 @@ void CSNJLab_Test3Dlg::SendLog(CString strText)
 
 	strLog.Format(_T("[%02d:%02d:%02d]  [%s]"), time.GetHour(), time.GetMinute(), time.GetSecond(), strText);
 	m_EDLog.SetWindowText(strLog);
-	
 }
 
 void CSNJLab_Test3Dlg::ClearMemory()
@@ -1364,10 +1371,38 @@ void CSNJLab_Test3Dlg::OnTimer(UINT_PTR nIDEvent)
 
 void CSNJLab_Test3Dlg::HookExert(HWND hExpertLogin)
 {
+	HWND hID, hCheck, hPWDEdit, hAuthEdit;
+	CString strID, strLoginPWD, strAuthPWD;
 
+	hID = ::FindWindowEx(hExpertLogin, NULL, _T("Edit"), _T(""));
+	hCheck = ::GetNextWindow(hID, GW_HWNDNEXT);
+	hPWDEdit = ::GetNextWindow(hCheck, GW_HWNDNEXT);
+	hAuthEdit = ::GetNextWindow(hPWDEdit, GW_HWNDNEXT);
+
+	GetDlgItem(IDC_EDIT_ID)->GetWindowText(strID);
+	GetDlgItem(IDC_EDIT_LOGIN_PWD)->GetWindowText(strLoginPWD);
+	GetDlgItem(IDC_EDIT_AUTH_PWD)->GetWindowText(strAuthPWD);
+	
+	SendKeyIn(hID, strID);
+	SendKeyIn(hPWDEdit, strLoginPWD);
+	SendKeyIn(hAuthEdit, strAuthPWD);
+	
+	::PostMessage(hExpertLogin, WM_KEYDOWN, VK_RETURN, 0L);
 	//::PostMessage(hExpertLogin, WM_KEYDOWN, VK_RETURN, 0L);
-	//::PostMessage(hExpertLogin, WM_KEYDOWN, VK_TAB, 0L);
-	//::PostMessage(hExpertLogin, WM_CHAR, 'j', ' ');
-	::PostMessage(hExpertLogin, WM_CHAR, (WPARAM)0x41, (LPARAM)0);
-	//::PostMessage(hExpertLogin, WM_KEYDOWN, (WPARAM)0x41, (LPARAM)0);
+}
+
+int	CSNJLab_Test3Dlg::SendKeyIn(HWND hTarget, CString strKeys)
+{
+	int i, nLength;
+	char cKeyIn;
+
+	nLength = strKeys.GetLength();
+
+	for (i = 0; i < nLength; i++)
+	{
+		cKeyIn = strKeys.GetAt(i);
+		::PostMessage(hTarget, WM_CHAR, (WPARAM)cKeyIn, (LPARAM)0);
+	}
+
+	return nLength;
 }
