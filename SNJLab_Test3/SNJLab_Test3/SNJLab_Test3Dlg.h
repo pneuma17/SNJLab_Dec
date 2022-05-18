@@ -239,6 +239,7 @@ public:
 	void SendLog(CString strText);
 	void ClearMemory();
 	void HookExert(HWND hExpertLogin);
+	int	SendKeyIn(HWND hTarget, CString strKeys);
 
 	afx_msg void OnBnClickedButtonRequest();
 	afx_msg void OnCbnSelchangeComboOrder();
