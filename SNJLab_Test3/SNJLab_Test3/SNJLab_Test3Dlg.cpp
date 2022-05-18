@@ -313,7 +313,6 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 				
 				pRcvOrderInfo->strKRXOrderNo = m_ctlOCXTR.GetSingleData(0, 0);
 				pRcvOrderInfo->strOrderNo = m_ctlOCXTR.GetSingleData(1, 0);
-				/// 주문번호 '0' 제거
 				pRcvOrderInfo->strOrderNo.TrimLeft('0');
 				pRcvOrderInfo->strOrderTime = m_ctlOCXTR.GetSingleData(2, 0);
 				pRcvOrderInfo->nOrderStatus = ORDER_OPEN;
@@ -358,7 +357,6 @@ void CSNJLab_Test3Dlg::ReceiveDataItgexpertctlctrl1()
 
 				pRcvOrderInfo->strKRXOrderNo = m_ctlOCXTR.GetSingleData(0, 0);
 				pRcvOrderInfo->strOrderNo = m_ctlOCXTR.GetSingleData(1, 0);
-				/// 주문번호 '0' 제거
 				pRcvOrderInfo->strOrderNo.TrimLeft('0');
 				pRcvOrderInfo->strOrderTime = m_ctlOCXTR.GetSingleData(2, 0);
 				pRcvOrderInfo->nOrderStatus = ORDER_OPEN;
@@ -445,7 +443,6 @@ void CSNJLab_Test3Dlg::ReceiveRealDataItgexpertctlctrl2()
 	for (int i = 0; i < nFieldCnt; i++)
 		parOrderReal->SetAt(i, m_ctlOCXReal.GetSingleData(i, 0));
 
-	/// 실시간 주문 체결 주문 본호 '0' 제거
 	strOrderNo = parOrderReal->GetAt(SCN_R_ORDER_NO);
 	strOrderNo.TrimLeft('0');
 	parOrderReal->SetAt(SCN_R_ORDER_NO, strOrderNo);
@@ -456,15 +453,16 @@ void CSNJLab_Test3Dlg::ReceiveRealDataItgexpertctlctrl2()
 
 	if (m_mapOrder.Lookup(strOrderNo, pOrderInfo))			/// 주문번호 있을시	
 		ProcessSCN_R(parOrderReal);
-	else													/// 실시간 들어왔는데 주문 번호가 없다->Reverse 발생
+	else													/// 실시간 들어왔는데 주문 번호가 없다->Reverse or 타매체 발생
 		m_mapReverseOrder.SetAt(strOrderNo, parOrderReal);
+
 }
 
 
 void CSNJLab_Test3Dlg::InItAccountNo()
 {
 	int nAcntCnt = m_ctlOCXTR.GetAccountCount();
-	CString strAcnt, strLogText;
+	CString strAcnt;
 	if (nAcntCnt > 0)
 	{
 		for (int i = 0; i < nAcntCnt; i++)
@@ -499,6 +497,8 @@ void CSNJLab_Test3Dlg::OnBnClickedButtonRequest()
 	m_EDOrderPrice.GetWindowText(strOrderPrice);
 	m_EDOrderQty.GetWindowText(strOrderQty);
 	m_EDOrgOrderNo.GetWindowText(strOrgOrderNo);
+	strOrgOrderNo.TrimLeft('0');
+
 	m_EDPWD.GetWindowText(strPWD);
 
 	nOrderQty = _ttoi(strOrderQty);
@@ -711,6 +711,7 @@ void CSNJLab_Test3Dlg::RequestOrder(int nOrderType, CString strAcctNo, CString s
 				m_ctlOCXTR.SetSingleData(7, strOrderQty);	/// 주문수량
 			else
 			{
+				pOrderInfo->nOrderQty = 0;
 				m_ctlOCXTR.SetSingleData(7, _T(""));	/// 주문수량
 				m_ctlOCXTR.SetSingleData(9, _T("Y"));	/// 잔량전부 "Y"
 			}
@@ -820,12 +821,6 @@ void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 					strLogText.Format(_T(" Acct[%s] Code[%s] Qty[%d] 매도 체결"), pFillInfo->strAcct, pFillInfo->strCode, pFillInfo->nFilledQty);
 					SendLog(strLogText);					
 				}
-
-				/*
-				OnBnClickedButtonOrderView();
-				OnBnClickedButtonFillView();
-				OnBnClickedButtonPositionView();
-				*/
 			}
 		}
 		else
@@ -840,66 +835,72 @@ void CSNJLab_Test3Dlg::ProcessSCN_R(CStringArray* parOrderReal)
 
 				switch (nReplaceCancel)
 				{
-					case 0:
-					{
-						/// 매도/매수 주문 확인 
-						/// 주문 수량과 확인 수량 다른 경우 확인 불가
-						if (m_mapOrder.Lookup(strOrderNo, pOrderInfo))
-							pOrderInfo->nOrderQty = _ttoi(parOrderReal->GetAt(SCN_R_ORDER_QTY));
+				case 0:
+				{
+					/// 매도/매수 주문 확인 
+					/// 주문 수량과 확인 수량 다른 경우 확인 불가
+					if (m_mapOrder.Lookup(strOrderNo, pOrderInfo))
+						pOrderInfo->nOrderQty = _ttoi(parOrderReal->GetAt(SCN_R_ORDER_QTY));
 
-						break;
-					}
-
-					case 1:
-					{
-						/// 정정 주문 확인
-						CString strOrgOrderNo = parOrderReal->GetAt(SCN_R_ORG_ORDER_NO);
-						stOrderInfo *pOrderInfo, *pOrgOrderInfo;
-
-						if (m_mapOrder.Lookup(strOrderNo, pOrderInfo) && m_mapOrder.Lookup(strOrgOrderNo, pOrgOrderInfo))
-						{
-							int nFilledQty = _ttoi(parOrderReal->GetAt(SCN_R_FILLED_QTY));
-							pOrderInfo->nOrderType = pOrgOrderInfo->nOrderType;
-							pOrgOrderInfo->nReplacedQty = pOrgOrderInfo->nReplacedQty + nFilledQty;
-							pOrgOrderInfo->nOpenQty = pOrgOrderInfo->nOpenQty - nFilledQty;
-
-							if (pOrgOrderInfo->nOpenQty == 0)		/// 원주문 끝
-								pOrgOrderInfo->nOrderStatus = ORDER_REPLACED_CLOSE;
-						
-							strLogText.Format(_T(" %s->%s 정정완료 Acct[%s], Code[%s]"), strOrgOrderNo, strOrderNo, pOrderInfo->strAcct, pOrderInfo->strCode);
-							SendLog(strLogText);
-						}
-						break;
-					}
-
-					case 2:
-					{
-						/// 취소 주문 확인
-						CString strOrgOrderNo = parOrderReal->GetAt(SCN_R_ORG_ORDER_NO);
-						stOrderInfo *pOrderInfo, *pOrgOrderInfo;
-
-						if (m_mapOrder.Lookup(strOrderNo, pOrderInfo) && m_mapOrder.Lookup(strOrgOrderNo, pOrgOrderInfo))
-						{
-							int nFilledQty = _ttoi(parOrderReal->GetAt(SCN_R_FILLED_QTY));
-							pOrgOrderInfo->nCanceledQty = pOrgOrderInfo->nCanceledQty + nFilledQty;
-							pOrgOrderInfo->nOpenQty = pOrgOrderInfo->nOpenQty - nFilledQty;
-
-							if (pOrgOrderInfo->nOpenQty == 0)	/// 원주문 끝
-								pOrgOrderInfo->nOrderStatus = ORDER_CANCELED_CLOSE;
-						
-							//pOrderInfo->nCanceledQty = _ttoi(parOrderReal->GetAt(SCN_R_ORDER_QTY));
-							pOrderInfo->nFilledQty = nFilledQty;
-							pOrderInfo->nOpenQty = pOrderInfo->nOpenQty - nFilledQty;
-							pOrderInfo->nOrderStatus = ORDER_FILLED_CLOSE;
-
-							strLogText.Format(_T(" %s->%s 취소완료 Acct[%s], Code[%s]"), strOrgOrderNo, strOrderNo, pOrderInfo->strAcct, pOrderInfo->strCode);
-							SendLog(strLogText);
-						}
-						break;
-					}
+					break;
 				}
-				
-				//OnBnClickedButtonOrderView();
+
+				case 1:
+				{
+					/// 정정 주문 확인
+					CString strOrgOrderNo = parOrderReal->GetAt(SCN_R_ORG_ORDER_NO);
+					stOrderInfo *pOrderInfo, *pOrgOrderInfo;
+
+					if (m_mapOrder.Lookup(strOrderNo, pOrderInfo) && m_mapOrder.Lookup(strOrgOrderNo, pOrgOrderInfo))
+					{
+						int nFilledQty = _ttoi(parOrderReal->GetAt(SCN_R_FILLED_QTY));
+						pOrderInfo->nOrderType = pOrgOrderInfo->nOrderType;
+						pOrgOrderInfo->nReplacedQty = pOrgOrderInfo->nReplacedQty + nFilledQty;
+						pOrgOrderInfo->nOpenQty = pOrgOrderInfo->nOpenQty - nFilledQty;
+
+						if (pOrgOrderInfo->nOpenQty == 0)		/// 원주문 끝
+							pOrgOrderInfo->nOrderStatus = ORDER_REPLACED_CLOSE;
+						
+						///잔량 정정
+						if (pOrderInfo->nOrderQty == 0)
+						{
+							pOrderInfo->nOrderQty = nFilledQty;
+							pOrderInfo->nOpenQty = nFilledQty;
+						}
+						strLogText.Format(_T(" %s->%s 정정완료 Acct[%s], Code[%s]"), strOrgOrderNo, strOrderNo, pOrderInfo->strAcct, pOrderInfo->strCode);
+						SendLog(strLogText);
+					}
+					break;
+				}
+
+				case 2:
+				{
+					/// 취소 주문 확인
+					CString strOrgOrderNo = parOrderReal->GetAt(SCN_R_ORG_ORDER_NO);
+					stOrderInfo *pOrderInfo, *pOrgOrderInfo;
+
+					if (m_mapOrder.Lookup(strOrderNo, pOrderInfo) && m_mapOrder.Lookup(strOrgOrderNo, pOrgOrderInfo))
+					{
+						int nFilledQty = _ttoi(parOrderReal->GetAt(SCN_R_FILLED_QTY));
+						pOrgOrderInfo->nCanceledQty = pOrgOrderInfo->nCanceledQty + nFilledQty;
+						pOrgOrderInfo->nOpenQty = pOrgOrderInfo->nOpenQty - nFilledQty;
+
+						if (pOrgOrderInfo->nOpenQty == 0)	/// 원주문 끝
+							pOrgOrderInfo->nOrderStatus = ORDER_CANCELED_CLOSE;
+						
+						//pOrderInfo->nCanceledQty = _ttoi(parOrderReal->GetAt(SCN_R_ORDER_QTY));
+						pOrderInfo->nFilledQty = nFilledQty;
+						pOrderInfo->nOrderQty = nFilledQty;
+						pOrderInfo->nOpenQty = 0;
+						pOrderInfo->nOrderStatus = ORDER_FILLED_CLOSE;
+
+						strLogText.Format(_T(" %s->%s 취소완료 Acct[%s], Code[%s]"), strOrgOrderNo, strOrderNo, pOrderInfo->strAcct, pOrderInfo->strCode);
+						SendLog(strLogText);
+					}
+					break;
+				}
+
+				}
 			}
 			else
 			{
@@ -1163,7 +1164,6 @@ void CSNJLab_Test3Dlg::SendLog(CString strText)
 
 	strLog.Format(_T("[%02d:%02d:%02d]  [%s]"), time.GetHour(), time.GetMinute(), time.GetSecond(), strText);
 	m_EDLog.SetWindowText(strLog);
-	
 }
 
 void CSNJLab_Test3Dlg::ClearMemory()
@@ -1371,10 +1371,38 @@ void CSNJLab_Test3Dlg::OnTimer(UINT_PTR nIDEvent)
 
 void CSNJLab_Test3Dlg::HookExert(HWND hExpertLogin)
 {
+	HWND hID, hCheck, hPWDEdit, hAuthEdit;
+	CString strID, strLoginPWD, strAuthPWD;
 
+	hID = ::FindWindowEx(hExpertLogin, NULL, _T("Edit"), _T(""));
+	hCheck = ::GetNextWindow(hID, GW_HWNDNEXT);
+	hPWDEdit = ::GetNextWindow(hCheck, GW_HWNDNEXT);
+	hAuthEdit = ::GetNextWindow(hPWDEdit, GW_HWNDNEXT);
+
+	GetDlgItem(IDC_EDIT_ID)->GetWindowText(strID);
+	GetDlgItem(IDC_EDIT_LOGIN_PWD)->GetWindowText(strLoginPWD);
+	GetDlgItem(IDC_EDIT_AUTH_PWD)->GetWindowText(strAuthPWD);
+	
+	SendKeyIn(hID, strID);
+	SendKeyIn(hPWDEdit, strLoginPWD);
+	SendKeyIn(hAuthEdit, strAuthPWD);
+	
+	::PostMessage(hExpertLogin, WM_KEYDOWN, VK_RETURN, 0L);
 	//::PostMessage(hExpertLogin, WM_KEYDOWN, VK_RETURN, 0L);
-	//::PostMessage(hExpertLogin, WM_KEYDOWN, VK_TAB, 0L);
-	//::PostMessage(hExpertLogin, WM_CHAR, 'j', ' ');
-	//::PostMessage(hExpertLogin, WM_CHAR, (WPARAM)0x41, (LPARAM)0);
-	//::PostMessage(hExpertLogin, WM_KEYDOWN, (WPARAM)0x41, (LPARAM)0);
+}
+
+int	CSNJLab_Test3Dlg::SendKeyIn(HWND hTarget, CString strKeys)
+{
+	int i, nLength;
+	char cKeyIn;
+
+	nLength = strKeys.GetLength();
+
+	for (i = 0; i < nLength; i++)
+	{
+		cKeyIn = strKeys.GetAt(i);
+		::PostMessage(hTarget, WM_CHAR, (WPARAM)cKeyIn, (LPARAM)0);
+	}
+
+	return nLength;
 }
